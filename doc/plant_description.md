@@ -1,12 +1,4 @@
 # Plant documentation
-<script type="text/javascript" async
-  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-</script>
-<script type="text/x-mathjax-config">
-  MathJax.Hub.Config({
-    TeX: { equationNumbers: { autoNumber: "AMS" } }
-  });
-</script>
 
 <style>
     /* initialise the counter */
@@ -34,19 +26,31 @@ its geometric center. We will obtain a mathematical model for the system. To ana
     <figcaption>Free body diagram of inverted pendulum system</figcaption>
 </figure>
 
-Suppose that $(x_{G},y_{G})$ is the coordinates of
-the center of gravity of the pendulum rod. 
-
-Here is an equation:
+The equations that describe the motion of inverted-pendulum-on-the cart system are:
 
 $$
-\begin{equation}
-E = mc^2
-\end{equation}
+(M+m)\frac{d^{2}x }{dt} + ml\frac{d^{2}\theta }{dt} = u \tag{1}
 $$
 
 $$
-\begin{equation}
-F = ma
-\end{equation}
+(I+ml^{2})\frac{d^{2}\theta }{dt}+ml\frac{d^{2}x }{dt} = mgl\theta \tag{2}
 $$
+
+We can reduce the order of ODE by introducing new variables $v$ and $\omega$
+
+$$
+\frac{dx }{dt} \tag{3} = v 
+$$
+
+$$
+\frac{dv }{dt} = \frac{(I + ml^{2})u - m^{2}l^{2}g\theta}{(M+m)(I+ml^{2})-(ml)^{2}} \tag{4}
+$$
+
+$$
+\frac{d\theta }{dt} = \omega \tag{5}
+$$
+
+$$
+\frac{d\omega }{dt} = \frac{mlu - mgl\theta (M+m)}{(ml)^{2}-(I+ml^{2})(M+m)} \tag{6}
+$$
+
