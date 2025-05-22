@@ -1,1 +1,2 @@
+add_subdirectory(external_lib/matplotlib)
 add_subdirectory(math_operation)

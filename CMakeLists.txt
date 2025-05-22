@@ -16,6 +16,7 @@ add_subdirectory(app)
 add_subdirectory(tests)
 
 include(FetchContent)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/external_lib/eigen-lib-3.4.0)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/b514bdc898e2951020cbdca1304b75f5950d1f59.zip

@@ -27,3 +27,8 @@ This project simulate PID controller from scratch using C++
    .\tests\math_operation\Debug\factorial_test.exe
    ```
    The test should pass all the test cases
+
+
+   # Add documentation for plant and PID description
+
+   balsakfaskfkaslfkaslflmas
