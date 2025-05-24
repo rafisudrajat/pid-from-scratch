@@ -1,5 +1,5 @@
-#include "factorial.h"
 #include <iostream>
+#include "factorial.h"
 #include "matplotlibcpp.h"
 #include "Eigen/Dense"
 using Eigen::MatrixXd;
