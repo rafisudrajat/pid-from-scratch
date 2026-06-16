@@ -74,7 +74,8 @@ test goes red. Every step below names the specific sabotage to try.
 - **C++17**, `PascalCase` types, `camelCase` methods (e.g. `solveODEWithRalstonMethod`),
   headers in each module's `include/`, sources as `.cc`.
 - Each module under `src/<name>/` builds a **STATIC library** via its own `CMakeLists.txt`;
-  tests mirror it under `tests/<name>/` and link **GoogleTest** + that library.
+  tests mirror it under `tests/<name>/` and link **GoogleTest** + that library. The exact CMake
+  recipe for adding each file/module is in **§Wiring** below.
 - Eigen is included as `#include "Eigen/Dense"` from the bundled
   `src/external_lib/eigen-lib-3.4.0`. Use `Eigen::VectorXd` / `Eigen::MatrixXd` for real data
   and `Eigen::VectorXcd` for poles/zeros.
@@ -84,6 +85,84 @@ test goes red. Every step below names the specific sabotage to try.
 - **Tolerances:** exact algebra on `double` → `ASSERT_NEAR(…, 1e-9)`; analytic comparisons →
   `1e-6`; RK4-integrated trajectories → `1e-4`; convergence-ratio checks → within ~10% of 16.
 - Scope is **SISO** (single-input single-output), continuous-time plants. MIMO is out of scope.
+- **Build wiring is manual** (no globbing). Every step that adds a file also implies a CMake
+  edit — see the next section. Forgetting it is the `No tests were found` / `Eigen/Dense: No
+  such file or directory` class of error.
+
+---
+
+## Wiring new code into the build (you will do this at almost every step)
+
+CMake here does **not** auto-discover files: test executables are listed one by one and the
+library source list is explicit. The two failure modes this prevents are *"my new test never
+runs"* (forgot to register it) and *"Eigen/Dense: No such file or directory"* (the include
+path doesn't reach the target). Each lettered recipe below is referenced from the steps as
+**§Wiring A–E**.
+
+**Top-level testing must stay on.** `enable_testing()` lives in the root
+[`CMakeLists.txt`](CMakeLists.txt); without it `ctest` prints *"No tests were found"* even
+though the test binaries built fine. That is the canonical home — don't rely on the copy in a
+subdirectory.
+
+**A — Register a new test in an existing test module** (e.g. `linspace_test.cc` under
+[`tests/math_operation/`](tests/math_operation/CMakeLists.txt)): add three lines to that
+module's `CMakeLists.txt`:
+```cmake
+add_executable(linspace_test linspace_test.cc)
+target_link_libraries(linspace_test GTest::gtest_main MATH_OPERATION)
+gtest_discover_tests(linspace_test)
+```
+
+**B — Add a source file to the `math_operation` library** (e.g. `linspace.cc`): append the
+`.cc` to `LIBRARY_SOURCES` and the `.h` to `LIBRARY_HEADERS` in
+[`src/math_operation/CMakeLists.txt`](src/math_operation/CMakeLists.txt). That list is typed
+out by hand — a new file not added there simply isn't compiled into the library.
+
+**C — Make Eigen reachable from a library's consumers (the subtle one).**
+[`src/CMakeLists.txt`](src/CMakeLists.txt)'s `include_directories(... eigen-lib-3.4.0)` is
+**directory-scoped to `src/` and does NOT propagate to `tests/`** (that's why
+[`app/CMakeLists.txt`](app/CMakeLists.txt) adds the Eigen path itself). The first moment a
+library's **public header** includes `Eigen/Dense` is **Step 1.1** (`linspace.h` returns
+`Eigen::VectorXd`); from then on every test that includes that header needs Eigen on its path.
+Fix it once, on the library target, so it propagates transitively to anything that links it:
+```cmake
+target_include_directories(MATH_OPERATION PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src/external_lib/eigen-lib-3.4.0)
+```
+Do the same on the new `control` library. After this, any target that links the library gets
+Eigen for free — no per-test include paths needed.
+
+**D — A test that includes Eigen directly but links no Eigen-exposing library** (e.g.
+`eigen_matchers_test.cc` in Step 0.2, which links only GoogleTest): give *that* target the path
+explicitly:
+```cmake
+target_include_directories(eigen_matchers_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/external_lib/eigen-lib-3.4.0)
+```
+
+**E — Stand up a whole new module (the `control` library, first needed in Phase 2):**
+1. Create `src/control/CMakeLists.txt`, modeled on `math_operation`'s: its own `STATIC` lib
+   with `target_include_directories(... PUBLIC include + Eigen path)` per **C**, and
+   `target_link_libraries(CONTROL PUBLIC MATH_OPERATION)` (it reuses `linspace`/`polynomial`/
+   `rk4Step`).
+2. Add `add_subdirectory(control)` to [`src/CMakeLists.txt`](src/CMakeLists.txt).
+3. Create `tests/control/CMakeLists.txt` (one `add_executable`/`gtest_discover_tests` per test
+   file, per **A**, linking the `control` lib).
+4. Add `add_subdirectory(control)` to [`tests/CMakeLists.txt`](tests/CMakeLists.txt).
+5. The shared `tests/support/` directory (created back in Step 0.2) is wired the same way:
+   create `tests/support/CMakeLists.txt` registering `eigen_matchers_test` (per **A**, plus
+   **D** for its Eigen path), add `add_subdirectory(support)` to
+   [`tests/CMakeLists.txt`](tests/CMakeLists.txt), and expose `eigen_matchers.h` to other test
+   targets — either by adding `${CMAKE_SOURCE_DIR}/tests/support` to their include dirs or
+   (cleaner) as a header-only `INTERFACE` library they link.
+
+**After any wiring change**, re-run the full pipeline from the project root and confirm your new
+test name actually appears in the ctest listing — *don't* trust a `100% passed` that only ran
+the pre-existing tests:
+```
+cmake -S . -B build && cmake --build build && ctest --test-dir build
+```
 
 ---
 
@@ -96,10 +175,13 @@ design decisions everything else assumes. (GoogleTest is already wired — `fact
 ### Step 0.1 — Green pipeline + one-command test run
 **Goal:** `cmake --build` succeeds and `ctest` runs the existing suite green, so every later
 Red/Green is measured against a known-good baseline.
-**Red — write the test:** none new — *run* the existing suite. From a fresh `build/`:
-`cmake -S . -B build && cmake --build build && ctest --test-dir build`. If `ctest` finds no
-tests, that's your red: `gtest_discover_tests` is only called in
-[`tests/math_operation/CMakeLists.txt`](tests/math_operation/CMakeLists.txt).
+**Red — write the test:** none new — *run* the existing suite. From the **project root** (the
+directory containing `CMakeLists.txt`), targeting a fresh `build/` subdirectory:
+`cmake -S . -B build && cmake --build build && ctest --test-dir build`. If the build succeeds
+but `ctest` prints **`No tests were found!!!`**, that's your red — the cause is a missing
+`enable_testing()` in the **root** [`CMakeLists.txt`](CMakeLists.txt). (It was present only in
+[`tests/math_operation/CMakeLists.txt`](tests/math_operation/CMakeLists.txt), whose scope
+`ctest` does not descend into unless testing is enabled at the top level first.)
 **Green — make it pass:** ensure `enable_testing()` is active at the top level and `ctest`
 discovers `factorial_test` and `ode_test`. Confirm the bundled Eigen path compiles
 (`app/main.cc` includes `Eigen/Dense`).
@@ -127,6 +209,9 @@ returning `::testing::AssertionResult` so failures print *where* and *how far*:
 - Build → **red** (`eigen_matchers.h` doesn't exist).
 **Green — make it pass:** `tests/support/eigen_matchers.h` (header-only) with the three
 helpers; add a `tests/support` include path so test files do `#include "eigen_matchers.h"`.
+**Wire it** per **§Wiring D** (the meta-test includes `Eigen/Dense` directly, so it needs the
+Eigen path on its own target) and **§Wiring E.5** (put `tests/support` on the include path and
+register the new test directory in [`tests/CMakeLists.txt`](tests/CMakeLists.txt)).
 **Why it matters:** Your oracles are only as trustworthy as the tools that apply them; meta-
 testing them first means every later "green" means something.
 **Gate:** the matcher meta-tests pass. Faithfulness: make `expectVectorNear` `return
@@ -169,7 +254,10 @@ endpoints**, equally spaced by `h = (stop − start)/(n − 1)`. `n == 1` return
   `1e-12`.
 - `test_single_point` *(edge)*: `linspace(3, 7, 1)` is `{3}`.
 - Build → **red**.
-**Green — make it pass:** `math_operation/linspace.{h,cc}` returning `Eigen::VectorXd`.
+**Green — make it pass:** `math_operation/linspace.{h,cc}` returning `Eigen::VectorXd`. **Wire
+it** per **§Wiring A + B**, and — because `linspace.h` is the **first** `math_operation` header
+to include `Eigen/Dense` — apply **§Wiring C** now (make Eigen a `PUBLIC` include of
+`MATH_OPERATION`), or `linspace_test` will fail with `Eigen/Dense: No such file or directory`.
 **Why it matters:** Every simulation runs on a time grid; off-by-one on the endpoint silently
 shifts every later sample.
 **Gate:** the linspace tests pass. Faithfulness: divide by `n` instead of `n−1` → the spacing
@@ -196,7 +284,7 @@ zeros.
 - `test_roots_match_eval` *(invariant)*: each returned root `r` satisfies `|p(r)| < 1e-8`.
 - Build → **red**.
 **Green — make it pass:** `math_operation/polynomial.{h,cc}` (`polynomialEval`,
-`polynomialRoots`).
+`polynomialRoots`). Wire it per **§Wiring A + B**.
 **Why it matters:** Poles/zeros and the DC gain all reduce to these two operations; the
 companion-matrix trick is the bridge from algebra to Eigen's eigensolver.
 **Gate:** the polynomial tests pass. Faithfulness: drop the monic normalization (skip dividing
@@ -224,7 +312,9 @@ test):
 - Build → **red**.
 **Green — make it pass:** extend `ODESolver` in `math_operation/ode.{h,cc}` with
 `Eigen::VectorXd rk4Step(const std::function<Eigen::VectorXd(double,const Eigen::VectorXd&)>& f,
-double t, const Eigen::VectorXd& x, double stepSize)`.
+double t, const Eigen::VectorXd& x, double stepSize)`. `ode.h` now needs `#include <functional>`
+and `#include "Eigen/Dense"`; this relies on the `MATH_OPERATION` public-Eigen wiring from
+**§Wiring C** (done in Step 1.1) — without it, the existing `ode_test` will stop compiling.
 **Why it matters:** This is the engine that advances the plant. The convergence test is what
 *proves* it's genuinely 4th-order rather than "looks about right."
 **Gate:** the RK4 tests pass. Faithfulness: change the weights `(1,2,2,1)/6` to `(1,1,1,1)/4`
@@ -255,8 +345,11 @@ answers the questions control engineers ask of `G(s)`.
   classify correctly.
 - `test_rejects_zero_denominator` *(edge)*: constructing with an all-zero denominator throws.
 - Build → **red**.
-**Green — make it pass:** `control/transfer_function.{h,cc}` (`dcGain`, `isProper`,
-`isStrictlyProper`).
+**Green — make it pass:** this is the **first `control` code**, so before it can compile you must
+**stand up the new `control` library and `tests/control/` directory per §Wiring E** (new
+`src/control/CMakeLists.txt` + `add_subdirectory(control)` in both
+[`src/CMakeLists.txt`](src/CMakeLists.txt) and [`tests/CMakeLists.txt`](tests/CMakeLists.txt)).
+Then write `control/transfer_function.{h,cc}` (`dcGain`, `isProper`, `isStrictlyProper`).
 **Why it matters:** DC gain is the first sanity check on any loop ("where does it settle?");
 properness decides whether a state-space realization even exists.
 **Gate:** the TF tests pass. Faithfulness: compute DC gain from the **leading** coeffs
@@ -683,11 +776,17 @@ pid-from-scratch/
 │   │   └── CMakeLists.txt            # new STATIC lib, links Eigen
 │   └── external_lib/                 # eigen-lib-3.4.0, matplotlib (unchanged)
 ├── tests/
-│   ├── support/eigen_matchers.h      # 0.2
-│   ├── math_operation/{linspace,polynomial,ode}_test.cc
-│   └── control/{transfer_function,state_space,pid_controller,
-│                closed_loop_simulator,step_response_metrics,
-│                notebook_golden,second_order_validation}_test.cc
+│   ├── CMakeLists.txt                 # add_subdirectory(math_operation) + (control), (support)
+│   ├── support/
+│   │   ├── eigen_matchers.h           # 0.2 (header-only)
+│   │   ├── eigen_matchers_test.cc     # 0.2 (the meta-test)
+│   │   └── CMakeLists.txt             # 0.2 (registered via tests/CMakeLists.txt)
+│   ├── math_operation/                # CMakeLists.txt gains linspace_test, polynomial_test
+│   │   └── {linspace,polynomial,ode}_test.cc
+│   └── control/                       # new CMakeLists.txt: one executable per *_test.cc
+│       └── {transfer_function,state_space,pid_controller,
+│            closed_loop_simulator,step_response_metrics,
+│            notebook_golden,second_order_validation}_test.cc
 ├── doc/
 │   ├── plant_description.md          # existing
 │   └── adr-001-architecture.md       # 0.3
