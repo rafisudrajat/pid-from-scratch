@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Dense>
+#include <complex>
 #include <stdexcept>
 
 /**
@@ -50,6 +51,36 @@ public:
      * @brief True if deg(num) < deg(den) (no direct feedthrough, D = 0).
      */
     bool isStrictlyProper() const;
+
+    /**
+     * @brief Roots of the denominator polynomial.
+     *
+     * The poles determine the natural modes of the system: a real pole
+     * at −a produces a mode e^(−at); a complex pair ±jω produces
+     * oscillation. Delegates to polynomialRoots (companion-matrix
+     * eigensolver).
+     *
+     * @return Complex vector of poles (length = deg(den)).
+     */
+    Eigen::VectorXcd poles() const;
+
+    /**
+     * @brief Roots of the numerator polynomial.
+     *
+     * Zeros shape how inputs are transmitted through the system.
+     * Delegates to polynomialRoots.
+     *
+     * @return Complex vector of zeros (length = deg(num)).
+     */
+    Eigen::VectorXcd zeros() const;
+
+    /**
+     * @brief True if all poles have strictly negative real part.
+     *
+     * A continuous-time LTI system is BIBO stable iff every pole
+     * lies in the open left-half plane (Re(p) < 0).
+     */
+    bool isStable() const;
 
     const Eigen::VectorXd& getNumerator() const { return numerator_; }
     const Eigen::VectorXd& getDenominator() const { return denominator_; }

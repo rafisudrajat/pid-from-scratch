@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "transfer_function.h"
+#include "eigen_matchers.h"
 
 TEST(TransferFunctionTest, DcGainFirstOrder) {
     // G = 5/(2s + 1) => num = [5], den = [2, 1]
@@ -64,4 +65,67 @@ TEST(TransferFunctionTest, RejectsZeroDenominator) {
     den << 0.0, 0.0;
 
     EXPECT_THROW(TransferFunction(num, den), std::invalid_argument);
+}
+
+TEST(TransferFunctionTest, PolesOfSecondOrder) {
+    // G = 1/(s^2 + 3s + 2) => den = [1, 3, 2]
+    // poles = roots of s^2 + 3s + 2 = (s+1)(s+2) => {-1, -2}
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 3.0, 2.0;
+
+    TransferFunction tf(num, den);
+    Eigen::VectorXcd expectedPoles(2);
+    expectedPoles << std::complex<double>(-1.0, 0.0),
+                     std::complex<double>(-2.0, 0.0);
+    EXPECT_TRUE(expectComplexSetNear(tf.poles(), expectedPoles, 1e-9));
+}
+
+TEST(TransferFunctionTest, ComplexPoles) {
+    // G = 1/(s^2 + 2s + 5) => den = [1, 2, 5]
+    // poles = -1 +/- 2i
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 2.0, 5.0;
+
+    TransferFunction tf(num, den);
+    Eigen::VectorXcd expectedPoles(2);
+    expectedPoles << std::complex<double>(-1.0, 2.0),
+                     std::complex<double>(-1.0, -2.0);
+    EXPECT_TRUE(expectComplexSetNear(tf.poles(), expectedPoles, 1e-9));
+}
+
+TEST(TransferFunctionTest, Zeros) {
+    // G = (s^2 - 1)/(s^2 + 2s + 2) => num = [1, 0, -1], den = [1, 2, 2]
+    // zeros = roots of s^2 - 1 = (s-1)(s+1) => {-1, +1}
+    Eigen::VectorXd num(3);
+    num << 1.0, 0.0, -1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 2.0, 2.0;
+
+    TransferFunction tf(num, den);
+    Eigen::VectorXcd expectedZeros(2);
+    expectedZeros << std::complex<double>(-1.0, 0.0),
+                     std::complex<double>(1.0, 0.0);
+    EXPECT_TRUE(expectComplexSetNear(tf.zeros(), expectedZeros, 1e-9));
+}
+
+TEST(TransferFunctionTest, StabilityPredicate) {
+    // Stable: G = 1/(s^2 + 3s + 2), poles {-1, -2} — all Re < 0
+    Eigen::VectorXd num1(1);
+    num1 << 1.0;
+    Eigen::VectorXd den1(3);
+    den1 << 1.0, 3.0, 2.0;
+    TransferFunction stable(num1, den1);
+    EXPECT_TRUE(stable.isStable());
+
+    // Unstable: G = 1/(s^2 - 1), poles {-1, +1} — one Re > 0
+    Eigen::VectorXd num2(1);
+    num2 << 1.0;
+    Eigen::VectorXd den2(3);
+    den2 << 1.0, 0.0, -1.0;
+    TransferFunction unstable(num2, den2);
+    EXPECT_FALSE(unstable.isStable());
 }

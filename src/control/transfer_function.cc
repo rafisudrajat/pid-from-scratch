@@ -1,4 +1,5 @@
 #include "transfer_function.h"
+#include "polynomial.h"
 
 TransferFunction::TransferFunction(const Eigen::VectorXd& numerator,
                                    const Eigen::VectorXd& denominator)
@@ -20,4 +21,22 @@ bool TransferFunction::isProper() const {
 
 bool TransferFunction::isStrictlyProper() const {
     return numerator_.size() < denominator_.size();
+}
+
+Eigen::VectorXcd TransferFunction::poles() const {
+    return polynomialRoots(denominator_);
+}
+
+Eigen::VectorXcd TransferFunction::zeros() const {
+    return polynomialRoots(numerator_);
+}
+
+bool TransferFunction::isStable() const {
+    Eigen::VectorXcd p = poles();
+    for (int i = 0; i < p.size(); ++i) {
+        if (p(i).real() >= 0.0) {
+            return false;
+        }
+    }
+    return true;
 }
