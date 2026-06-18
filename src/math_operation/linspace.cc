@@ -1,4 +1,5 @@
 #include "linspace.h"
+#include <Eigen/Eigenvalues>
 
 Eigen::VectorXd linspace(double start, double end, int count) {
     Eigen::VectorXd v(count);

@@ -3,12 +3,14 @@ set(LIBRARY_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/factorial.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/ode.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/linspace.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/polynomial.cc
 )
 
 set(LIBRARY_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/factorial.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ode.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/linspace.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/polynomial.h
 )
 
 set(LIBRARY_INCLUDES

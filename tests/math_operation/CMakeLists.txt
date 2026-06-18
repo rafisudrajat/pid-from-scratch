@@ -25,7 +25,11 @@ target_link_libraries(
 add_executable(linspace_test linspace_test.cc)
 target_link_libraries(linspace_test GTest::gtest_main MATH_OPERATION)
 
+add_executable(polynomial_test polynomial_test.cc)
+target_link_libraries(polynomial_test GTest::gtest_main MATH_OPERATION)
+
 include(GoogleTest)
 gtest_discover_tests(factorial_test)
 gtest_discover_tests(ode_test)
 gtest_discover_tests(linspace_test)
+gtest_discover_tests(polynomial_test)
