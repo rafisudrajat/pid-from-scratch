@@ -1,4 +1,6 @@
 #pragma once
+#include <functional>
+#include <Eigen/Dense>
 
 /**
  * @brief Numerical ODE solver collection.
@@ -18,4 +20,25 @@ public:
      * @return Approximate y value at x0 + h.
      */
     double solveODEWithRalstonMethod(double (*f)(double,double),double x0, double y0, double stepSize);
+
+    /**
+     * @brief Perform one step of the classic 4th-order Runge-Kutta method
+     *        for a vector-valued ODE dx/dt = f(t, x).
+     *
+     * Computes four slope samples and combines them with weights
+     * (1, 2, 2, 1)/6 to advance the state by one step. The method is
+     * 4th-order accurate (global error O(h^4)) and integrates
+     * polynomial-in-t slopes of degree <= 3 exactly (Simpson's rule).
+     *
+     * @param f        Right-hand side function f(t, x).
+     * @param t        Current time.
+     * @param x        Current state vector.
+     * @param stepSize Step size h.
+     * @return Approximate state vector at t + h.
+     */
+    Eigen::VectorXd rk4Step(
+        const std::function<Eigen::VectorXd(double, const Eigen::VectorXd&)>& f,
+        double t,
+        const Eigen::VectorXd& x,
+        double stepSize);
 };

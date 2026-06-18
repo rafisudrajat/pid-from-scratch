@@ -22,6 +22,10 @@ target_link_libraries(
     MATH_OPERATION
 )
 
+target_include_directories(ode_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/support/include
+)
+
 add_executable(linspace_test linspace_test.cc)
 target_link_libraries(linspace_test GTest::gtest_main MATH_OPERATION)
 
