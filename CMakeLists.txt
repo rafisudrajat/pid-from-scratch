@@ -11,6 +11,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(EXECUTABLE_NAME MainExe)
 
+enable_testing()
+
 add_subdirectory(src)
 add_subdirectory(app)
 add_subdirectory(tests)
