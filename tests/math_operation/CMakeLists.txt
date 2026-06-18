@@ -22,6 +22,10 @@ target_link_libraries(
     MATH_OPERATION
 )
 
+add_executable(linspace_test linspace_test.cc)
+target_link_libraries(linspace_test GTest::gtest_main MATH_OPERATION)
+
 include(GoogleTest)
 gtest_discover_tests(factorial_test)
 gtest_discover_tests(ode_test)
+gtest_discover_tests(linspace_test)
