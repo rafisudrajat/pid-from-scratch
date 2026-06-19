@@ -80,3 +80,7 @@ void PIDController::reset() {
     timePrev_ = 0.0;
     firstCall_ = true;
 }
+
+void PIDController::setInitialTime(double timePrev) {
+    timePrev_ = timePrev;
+}

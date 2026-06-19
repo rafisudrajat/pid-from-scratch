@@ -34,6 +34,15 @@ target_include_directories(app_smoke_test PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/support/include
 )
 
+add_executable(notebook_golden_test notebook_golden_test.cc)
+target_link_libraries(notebook_golden_test GTest::gtest_main CONTROL)
+target_include_directories(notebook_golden_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/support/include
+)
+target_compile_definitions(notebook_golden_test PRIVATE
+    TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+)
+
 include(GoogleTest)
 gtest_discover_tests(transfer_function_test)
 gtest_discover_tests(state_space_test)
@@ -41,3 +50,4 @@ gtest_discover_tests(pid_controller_test)
 gtest_discover_tests(closed_loop_simulator_test)
 gtest_discover_tests(step_response_metrics_test)
 gtest_discover_tests(app_smoke_test)
+gtest_discover_tests(notebook_golden_test)

@@ -67,6 +67,16 @@ public:
      */
     void reset();
 
+    /**
+     * @brief Set the initial previous time for the controller.
+     *
+     * This allows initializing the controller with a specific time value
+     * for the first call, useful for matching reference implementations.
+     *
+     * @param timePrev Initial value for the previous time.
+     */
+    void setInitialTime(double timePrev);
+
 private:
     double kp_;     // Proportional gain
     double ki_;     // Integral gain
