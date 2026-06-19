@@ -3,6 +3,8 @@
 #include <complex>
 #include <stdexcept>
 
+class StateSpace;
+
 /**
  * @brief SISO transfer function G(s) = num(s) / den(s).
  *
@@ -81,6 +83,47 @@ public:
      * lies in the open left-half plane (Re(p) < 0).
      */
     bool isStable() const;
+
+    /**
+     * @brief Controllable canonical realization (A, B, C, D).
+     *
+     * Given a strictly proper transfer function
+     *
+     *           b_m s^m + ... + b_1 s + b_0
+     *   G(s) = ——————————————————————————————   (m < n)
+     *           a_n s^n + ... + a_1 s + a_0
+     *
+     * **Step 1 — Monic normalization.**  Divide every coefficient by
+     * the leading denominator coefficient a_n so the denominator
+     * becomes s^n + ā_{n-1} s^{n-1} + ... + ā_0  (where ā_i = a_i / a_n)
+     * and similarly b̄_i = b_i / a_n.
+     *
+     * **Step 2 — Controllable canonical form.**  Build
+     *
+     *       ⎡ 0   1   0  ···  0  ⎤         ⎡ 0 ⎤
+     *       ⎢ 0   0   1  ···  0  ⎥         ⎢ 0 ⎥
+     *   A = ⎢ ⋮           ⋱   ⋮  ⎥,    B = ⎢ ⋮ ⎥,
+     *       ⎢ 0   0   0  ···  1  ⎥         ⎢ 0 ⎥
+     *       ⎣-ā_0 -ā_1 -ā_2 ··· -ā_{n-1}⎦  ⎣ 1 ⎦
+     *
+     *   C = [ b̄_0  b̄_1  ···  b̄_{m} 0 ··· 0 ],    D = [ 0 ].
+     *
+     * A is the companion matrix: ones on the super-diagonal, and the
+     * negated monic denominator coefficients in ascending power order
+     * along the bottom row.  B is the n-th standard basis vector.
+     * C holds the normalized numerator coefficients in ascending power
+     * order, zero-padded to length n.  D is zero because the transfer
+     * function is strictly proper (deg(num) < deg(den)).
+     *
+     * **Why this works.**  The characteristic polynomial of the
+     * companion matrix A is det(sI − A) = s^n + ā_{n-1} s^{n-1} + ... + ā_0,
+     * which is exactly the monic denominator.  Therefore
+     *   - eig(A) == poles(G),
+     *   - −C·A⁻¹·B + D == G(0) == dcGain().
+     *
+     * @pre The transfer function must be strictly proper (m < n).
+     */
+    StateSpace toStateSpace() const;
 
     const Eigen::VectorXd& getNumerator() const { return numerator_; }
     const Eigen::VectorXd& getDenominator() const { return denominator_; }

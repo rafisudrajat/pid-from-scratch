@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include "state_space.h"
+#include "transfer_function.h"
+#include "eigen_matchers.h"
 
 TEST(StateSpaceTest, DerivativeAndOutput) {
     // A = [[0, 1], [-2, -3]], B = [[0], [1]], C = [[1, 0]], D = [[0]]
@@ -93,4 +95,73 @@ TEST(StateSpaceTest, DimensionValidation) {
     Eigen::MatrixXd badD(2, 1);
     badD.setZero();
     EXPECT_THROW(StateSpace(A, B, C, badD), std::invalid_argument);
+}
+
+TEST(StateSpaceTest, EigenvaluesEqualPoles) {
+    // G = 1/(s^2 + 3s + 2) => poles {-1, -2}
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 3.0, 2.0;
+
+    TransferFunction tf(num, den);
+    StateSpace ss = tf.toStateSpace();
+
+    Eigen::EigenSolver<Eigen::MatrixXd> solver(ss.getA());
+    Eigen::VectorXcd eigvals = solver.eigenvalues();
+
+    EXPECT_TRUE(expectComplexSetNear(eigvals, tf.poles(), 1e-9));
+}
+
+TEST(StateSpaceTest, RealizationDcGain) {
+    // Invariant: -C * A^{-1} * B + D == G.dcGain()
+
+    // Second-order: G = 1/(s^2 + 3s + 2), dcGain = 1/2 = 0.5
+    {
+        Eigen::VectorXd num(1);
+        num << 1.0;
+        Eigen::VectorXd den(3);
+        den << 1.0, 3.0, 2.0;
+        TransferFunction tf(num, den);
+        StateSpace ss = tf.toStateSpace();
+
+        double ssGain = (-ss.getC() * ss.getA().inverse() * ss.getB()
+                         + ss.getD())(0, 0);
+        EXPECT_NEAR(ssGain, tf.dcGain(), 1e-9);
+    }
+
+    // First-order: G = 5/(2s + 1), dcGain = 5/1 = 5
+    {
+        Eigen::VectorXd num(1);
+        num << 5.0;
+        Eigen::VectorXd den(2);
+        den << 2.0, 1.0;
+        TransferFunction tf(num, den);
+        StateSpace ss = tf.toStateSpace();
+
+        double ssGain = (-ss.getC() * ss.getA().inverse() * ss.getB()
+                         + ss.getD())(0, 0);
+        EXPECT_NEAR(ssGain, tf.dcGain(), 1e-9);
+    }
+}
+
+TEST(StateSpaceTest, FirstOrderLayout) {
+    // G = K/(tau*s + 1) with K=5, tau=2
+    // Realizes to A = [-1/tau], B = [1], C = [K/tau], D = [0]
+    double K = 5.0;
+    double tau = 2.0;
+
+    Eigen::VectorXd num(1);
+    num << K;
+    Eigen::VectorXd den(2);
+    den << tau, 1.0;
+
+    TransferFunction tf(num, den);
+    StateSpace ss = tf.toStateSpace();
+
+    EXPECT_EQ(ss.order(), 1);
+    EXPECT_NEAR(ss.getA()(0, 0), -1.0 / tau, 1e-9);
+    EXPECT_NEAR(ss.getB()(0, 0), 1.0, 1e-9);
+    EXPECT_NEAR(ss.getC()(0, 0), K / tau, 1e-9);
+    EXPECT_NEAR(ss.getD()(0, 0), 0.0, 1e-9);
 }
