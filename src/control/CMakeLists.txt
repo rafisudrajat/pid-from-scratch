@@ -4,6 +4,7 @@ set(LIBRARY_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/pid_controller.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/closed_loop_simulator.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/step_response_metrics.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/run_demo.cc
 )
 
 set(LIBRARY_HEADERS
@@ -12,6 +13,7 @@ set(LIBRARY_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pid_controller.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/closed_loop_simulator.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/step_response_metrics.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/run_demo.h
 )
 
 set(LIBRARY_INCLUDES

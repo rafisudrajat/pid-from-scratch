@@ -6,7 +6,7 @@ target_include_directories(${EXECUTABLE_NAME} PRIVATE
 
 target_link_libraries(
     ${EXECUTABLE_NAME}
-    PUBLIC MATH_OPERATION)
+    PUBLIC CONTROL)
 
 target_link_libraries(
     ${EXECUTABLE_NAME}
