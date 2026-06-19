@@ -22,8 +22,15 @@ target_include_directories(closed_loop_simulator_test PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/support/include
 )
 
+add_executable(step_response_metrics_test step_response_metrics_test.cc)
+target_link_libraries(step_response_metrics_test GTest::gtest_main CONTROL)
+target_include_directories(step_response_metrics_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/support/include
+)
+
 include(GoogleTest)
 gtest_discover_tests(transfer_function_test)
 gtest_discover_tests(state_space_test)
 gtest_discover_tests(pid_controller_test)
 gtest_discover_tests(closed_loop_simulator_test)
+gtest_discover_tests(step_response_metrics_test)
