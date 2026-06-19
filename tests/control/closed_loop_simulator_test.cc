@@ -41,8 +41,8 @@ TEST(ClosedLoopSimulatorTest, ResultShapes) {
     EXPECT_EQ(result.control.size(), nSteps);
 
     // First recorded output should be C * x0 (since u[-1] = 0 and D = 0)
-    double expected_first_output = plant.output(x0, 0.0);
-    EXPECT_NEAR(result.output(0), expected_first_output, 1e-12);
+    double expectedFirstOutput = plant.output(x0, 0.0);
+    EXPECT_NEAR(result.output(0), expectedFirstOutput, 1e-12);
 }
 
 TEST(ClosedLoopSimulatorTest, SettlesNearSetpointWithPI) {
@@ -110,8 +110,8 @@ TEST(ClosedLoopSimulatorTest, ZeroGainsIsOpenLoop) {
         plant, controller, setpoint, time, x0);
 
     // Run open-loop simulation with constant input = offset
-    double u_open_loop = 0.0;  // offset is 0
-    Eigen::VectorXd openLoopOutput = plant.simulateStep(u_open_loop, time, x0);
+    double uOpenLoop = 0.0;  // offset is 0
+    Eigen::VectorXd openLoopOutput = plant.simulateStep(uOpenLoop, time, x0);
 
     // With zero gains, the closed-loop should behave like open-loop with u = offset
     // The output should match the open-loop simulation
@@ -128,52 +128,52 @@ TEST(ClosedLoopSimulatorTest, ZeroGainsIsOpenLoop) {
 TEST(ClosedLoopSimulatorTest, POnlySteadyStateOffset) {
     // Closed-form: For G = K/(tau*s + 1) with unity feedback and P-only controller,
     // the closed-loop transfer function is T = (Kp*K)/(tau*s + 1 + Kp*K)
-    // Steady-state: y_infinity = Kp*K/(1 + Kp*K)
-    // Steady-state error: e_infinity = 1 - y_infinity = 1/(1 + Kp*K)
-    // With K = 1, Kp = 9: y_infinity = 9/10 = 0.9, e_infinity = 0.1
-    
+    // Steady-state: yInfinity = Kp*K/(1 + Kp*K)
+    // Steady-state error: eInfinity = 1 - yInfinity = 1/(1 + Kp*K)
+    // With K = 1, Kp = 9: yInfinity = 9/10 = 0.9, eInfinity = 0.1
+
     double K = 1.0;
     double tau = 1.0;
     double Kp = 9.0;
-    
+
     Eigen::VectorXd num(1);
     num << K;
     Eigen::VectorXd den(2);
     den << tau, 1.0;
-    
+
     TransferFunction tf(num, den);
     StateSpace plant = tf.toStateSpace();
-    
+
     // P-only controller (Ki = Kd = 0)
     PIDController controller(Kp, 0.0, 0.0, 0.0);
-    
+
     // Time grid - run long enough for steady state (5*tau should be plenty)
     double tStart = 0.0;
     double tEnd = 50.0;  // Very long to ensure steady state
     int nSteps = 10000;
     Eigen::VectorXd time = linspace(tStart, tEnd, nSteps);
-    
+
     // Initial state
     Eigen::VectorXd x0 = Eigen::VectorXd::Zero(plant.order());
-    
+
     // Unit step setpoint
     double setpoint = 1.0;
-    
+
     // Run simulation
     SimulationResult result = ClosedLoopSimulator::simulate(
         plant, controller, setpoint, time, x0);
-    
+
     // Expected steady-state values
-    double expected_y_infinity = Kp * K / (1.0 + Kp * K);  // 9/10 = 0.9
-    double expected_e_infinity = 1.0 / (1.0 + Kp * K);     // 1/10 = 0.1
-    
+    double expectedYInfinity = Kp * K / (1.0 + Kp * K);  // 9/10 = 0.9
+    double expectedEInfinity = 1.0 / (1.0 + Kp * K);     // 1/10 = 0.1
+
     // Check final output approaches expected value (within 1%)
     double finalOutput = result.output(result.output.size() - 1);
-    EXPECT_NEAR(finalOutput, expected_y_infinity, 1e-2);
-    
+    EXPECT_NEAR(finalOutput, expectedYInfinity, 1e-2);
+
     // Check steady-state error
     double finalError = std::abs(setpoint - finalOutput);
-    EXPECT_NEAR(finalError, expected_e_infinity, 1e-2);
+    EXPECT_NEAR(finalError, expectedEInfinity, 1e-2);
 }
 
 TEST(ClosedLoopSimulatorTest, IntegralEliminatesOffset) {
@@ -182,38 +182,38 @@ TEST(ClosedLoopSimulatorTest, IntegralEliminatesOffset) {
     double tau = 1.0;
     double Kp = 9.0;
     double Ki = 1.0;  // Non-zero integral gain
-    
+
     Eigen::VectorXd num(1);
     num << K;
     Eigen::VectorXd den(2);
     den << tau, 1.0;
-    
+
     TransferFunction tf(num, den);
     StateSpace plant = tf.toStateSpace();
-    
+
     // PI controller (with integral action)
     PIDController controller(Kp, Ki, 0.0, 0.0);
-    
+
     // Time grid - run long enough
     double tStart = 0.0;
     double tEnd = 50.0;
     int nSteps = 10000;
     Eigen::VectorXd time = linspace(tStart, tEnd, nSteps);
-    
+
     // Initial state
     Eigen::VectorXd x0 = Eigen::VectorXd::Zero(plant.order());
-    
+
     // Unit step setpoint
     double setpoint = 1.0;
-    
+
     // Run simulation
     SimulationResult result = ClosedLoopSimulator::simulate(
         plant, controller, setpoint, time, x0);
-    
+
     // With integral action, final error should be very close to zero
     double finalOutput = result.output(result.output.size() - 1);
     double finalError = std::abs(setpoint - finalOutput);
-    
+
     // Integral action should drive error below 0.1%
     EXPECT_LT(finalError, 1e-3);
 }

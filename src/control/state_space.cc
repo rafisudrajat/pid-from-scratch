@@ -33,7 +33,7 @@ double StateSpace::output(const Eigen::VectorXd& x, double u) const {
 Eigen::VectorXd StateSpace::simulateStep(double u, const Eigen::VectorXd& time, const Eigen::VectorXd& x0) const {
     int nSteps = static_cast<int>(time.size());
 
-    Eigen::VectorXd y_output(nSteps);
+    Eigen::VectorXd yOutput(nSteps);
     Eigen::VectorXd x = x0;
     ODESolver solver;
 
@@ -41,13 +41,13 @@ Eigen::VectorXd StateSpace::simulateStep(double u, const Eigen::VectorXd& time, 
         return derivative(x, u);
     };
 
-    y_output(0) = output(x, u);
+    yOutput(0) = output(x, u);
 
     for (int i = 1; i < nSteps; ++i) {
         double stepSize = time(i) - time(i - 1);
         x = solver.rk4Step(f, time(i - 1), x, stepSize);
-        y_output(i) = output(x, u);
+        yOutput(i) = output(x, u);
     }
     
-    return y_output;
+    return yOutput;
 }

@@ -97,19 +97,19 @@ TEST(StepResponseMetricsTest, SettlingAndSteadyState) {
     EXPECT_LT(metrics.settlingTime, tEnd);
     
     // First-order system G = 1/(s + 1) should have no overshoot
-    Eigen::VectorXd num_first_order(1);
-    num_first_order << 1.0;
-    Eigen::VectorXd den_first_order(2);
-    den_first_order << 1.0, 1.0;
-    TransferFunction tf_first_order(num_first_order, den_first_order);
-    StateSpace plant_first_order = tf_first_order.toStateSpace();
-    
-    Eigen::VectorXd x0_first_order = Eigen::VectorXd::Zero(plant_first_order.order());
-    Eigen::VectorXd output_first_order = plant_first_order.simulateStep(u, time, x0_first_order);
-    StepMetrics metrics_first_order = StepResponseMetrics::compute(time, output_first_order, setpoint);
-    
+    Eigen::VectorXd numFirstOrder(1);
+    numFirstOrder << 1.0;
+    Eigen::VectorXd denFirstOrder(2);
+    denFirstOrder << 1.0, 1.0;
+    TransferFunction tfFirstOrder(numFirstOrder, denFirstOrder);
+    StateSpace plantFirstOrder = tfFirstOrder.toStateSpace();
+
+    Eigen::VectorXd x0FirstOrder = Eigen::VectorXd::Zero(plantFirstOrder.order());
+    Eigen::VectorXd outputFirstOrder = plantFirstOrder.simulateStep(u, time, x0FirstOrder);
+    StepMetrics metricsFirstOrder = StepResponseMetrics::compute(time, outputFirstOrder, setpoint);
+
     // First-order system should have no overshoot
-    EXPECT_NEAR(metrics_first_order.percentOvershoot, 0.0, 1e-6);
+    EXPECT_NEAR(metricsFirstOrder.percentOvershoot, 0.0, 1e-6);
 }
 
 TEST(StepResponseMetricsTest, SteadyStateError) {

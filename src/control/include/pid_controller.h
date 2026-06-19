@@ -40,17 +40,17 @@ public:
      * Given the current setpoint and measurement, computes the PID output
      * using:
      *   P = Kp * e[k]
-     *   I[k] = I[k-1] + Ki * (T_s / 2) * (e[k] + e[k-1])  (trapezoidal rule)
-     *   D = Kd * (e[k] - e[k-1]) / T_s                  (backward difference)
+     *   I[k] = I[k-1] + Ki * (Ts / 2) * (e[k] + e[k-1])  (trapezoidal rule)
+     *   D = Kd * (e[k] - e[k-1]) / Ts                  (backward difference)
      *   u[k] = offset + P + I[k] + D
      *
-     * Where T_s = time - time_prev is the elapsed time since the last call.
+     * Where Ts = time - timePrev is the elapsed time since the last call.
      *
      * If output limits are set and u[k] exceeds them, u[k] is clamped and
      * the integral accumulator is NOT updated (anti-windup).
      *
-     * On the first call, e_prev is treated as 0, and time_prev is set to the
-     * first time value. If T_s <= 0, a small T_s = 1e-5 is used to avoid
+     * On the first call, ePrev is treated as 0, and timePrev is set to the
+     * first time value. If Ts <= 0, a small Ts = 1e-5 is used to avoid
      * division by zero.
      *
      * @param setpoint     Desired value.
@@ -72,15 +72,15 @@ private:
     double ki_;     // Integral gain
     double kd_;     // Derivative gain
     double offset_; // Operating point bias
-    
+
     // Internal state
     double integral_;   // Integral accumulator
-    double e_prev_;     // Previous error
-    double time_prev_; // Previous time
-    bool first_call_;  // True if this is the first call
-    
+    double ePrev_;      // Previous error
+    double timePrev_;   // Previous time
+    bool firstCall_;    // True if this is the first call
+
     // Output limits
-    double u_min_;     // Minimum output (default -infinity)
-    double u_max_;     // Maximum output (default +infinity)
-    bool has_limits_;  // True if limits are set
+    double uMin_;      // Minimum output (default -infinity)
+    double uMax_;      // Maximum output (default +infinity)
+    bool hasLimits_;   // True if limits are set
 };
