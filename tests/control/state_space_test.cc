@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
+#include <cmath>
 #include "state_space.h"
 #include "transfer_function.h"
+#include "linspace.h"
 #include "eigen_matchers.h"
 
 TEST(StateSpaceTest, DerivativeAndOutput) {
@@ -164,4 +166,92 @@ TEST(StateSpaceTest, FirstOrderLayout) {
     EXPECT_NEAR(ss.getB()(0, 0), 1.0, 1e-9);
     EXPECT_NEAR(ss.getC()(0, 0), K / tau, 1e-9);
     EXPECT_NEAR(ss.getD()(0, 0), 0.0, 1e-9);
+}
+
+TEST(StateSpaceTest, FirstOrderStepMatchesAnalytic) {
+    // G = 2/(s + 1) -> K = 2, tau = 1
+    // Exact step response: y(t) = 2*(1 - exp(-t))
+    double K = 2.0;
+    double tau = 1.0;
+
+    Eigen::VectorXd num(1);
+    num << K;
+    Eigen::VectorXd den(2);
+    den << tau, 1.0;
+
+    TransferFunction tf(num, den);
+    StateSpace ss = tf.toStateSpace();
+
+    // Simulate with fine grid
+    double tStart = 0.0;
+    double tEnd = 5.0;
+    int nSteps = 500;
+    Eigen::VectorXd time = linspace(tStart, tEnd, nSteps);
+    double u = 1.0;  // unit step
+    Eigen::VectorXd x0 = Eigen::VectorXd::Zero(ss.order());
+
+    Eigen::VectorXd output = ss.simulateStep(u, time, x0);
+
+    // Verify at each time point
+    for (int i = 0; i < nSteps; ++i) {
+        double t = time(i);
+        double expected = K * (1.0 - std::exp(-t / tau));
+        EXPECT_NEAR(output(i), expected, 1e-4);
+    }
+}
+
+TEST(StateSpaceTest, FinalValueIsDcGain) {
+    // Simulate a first-order system with unit step
+    // Final value should be K (the DC gain)
+    double K = 5.0;
+    double tau = 2.0;
+
+    Eigen::VectorXd num(1);
+    num << K;
+    Eigen::VectorXd den(2);
+    den << tau, 1.0;
+
+    TransferFunction tf(num, den);
+    StateSpace ss = tf.toStateSpace();
+
+    double tStart = 0.0;
+    double tEnd = 20.0;  // Run long enough to reach steady state (5*tau)
+    int nSteps = 1000;
+    Eigen::VectorXd time = linspace(tStart, tEnd, nSteps);
+    double u = 1.0;
+    Eigen::VectorXd x0 = Eigen::VectorXd::Zero(ss.order());
+
+    Eigen::VectorXd output = ss.simulateStep(u, time, x0);
+
+    // Final value should be approximately DC gain * u
+    double finalOutput = output(output.size() - 1);
+    EXPECT_NEAR(finalOutput, tf.dcGain() * u, 1e-3);
+}
+
+TEST(StateSpaceTest, ZeroInputZeroStateStaysZero) {
+    // With zero input and zero initial state, output should stay zero
+    Eigen::MatrixXd A(2, 2);
+    A << 0, 1, -2, -3;
+    Eigen::MatrixXd B(2, 1);
+    B << 0, 1;
+    Eigen::MatrixXd C(1, 2);
+    C << 1, 0;
+    Eigen::MatrixXd D(1, 1);
+    D << 0;
+
+    StateSpace ss(A, B, C, D);
+
+    double tStart = 0.0;
+    double tEnd = 1.0;
+    int nSteps = 100;
+    Eigen::VectorXd time = linspace(tStart, tEnd, nSteps);
+    double u = 0.0;
+    Eigen::VectorXd x0 = Eigen::VectorXd::Zero(ss.order());
+
+    Eigen::VectorXd output = ss.simulateStep(u, time, x0);
+
+    // All outputs should be zero (within tolerance)
+    for (int i = 0; i < nSteps; ++i) {
+        EXPECT_NEAR(output(i), 0.0, 1e-12);
+    }
 }

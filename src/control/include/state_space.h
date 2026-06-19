@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <stdexcept>
+#include <functional>
 
 /**
  * @brief SISO state-space model (A, B, C, D).
@@ -36,6 +37,19 @@ public:
      * @brief Scalar output y = C·x + D·u.
      */
     double output(const Eigen::VectorXd& x, double u) const;
+
+    /**
+     * @brief Simulate the open-loop step response.
+     *
+     * Simulates dx/dt = A·x + B·u, y = C·x + D·u with constant input u
+     * (zero-order hold) over the given time grid using RK4 integration.
+     *
+     * @param u        Constant input value (unit step).
+     * @param time     Time grid (n×1 vector of time points).
+     * @param x0       Initial state vector.
+     * @return Output y at each time point.
+     */
+    Eigen::VectorXd simulateStep(double u, const Eigen::VectorXd& time, const Eigen::VectorXd& x0) const;
 
     const Eigen::MatrixXd& getA() const { return A_; }
     const Eigen::MatrixXd& getB() const { return B_; }
