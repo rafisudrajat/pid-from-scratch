@@ -108,3 +108,79 @@ TEST(PIDControllerTest, ResetClearsState) {
     EXPECT_NEAR(output1, output3, 1e-9);
     EXPECT_NEAR(output2, output4, 1e-9);
 }
+
+TEST(PIDControllerTest, OutputClamped) {
+    // Test that output is clamped to [u_min, u_max]
+    PIDController pid(1.0, 0.0, 0.0, 0.0);
+    pid.setOutputLimits(0.0, 10.0);
+
+    // Large error that would drive output to 50 without clamping
+    double setpoint = 50.0;
+    double measurement = 0.0;
+    double time = 0.0;
+
+    double output = pid.compute(setpoint, measurement, time);
+    // P = 1.0 * (50 - 0) = 50, but clamped to 10
+    EXPECT_NEAR(output, 10.0, 1e-9);
+}
+
+TEST(PIDControllerTest, NoWindup) {
+    // Test that integral doesn't accumulate when output is saturated.
+    // Use a limit that's strictly less than the initial integral contribution
+    
+    PIDController pid(0.0, 1.0, 0.0, 0.0);
+    pid.setOutputLimits(-4.0, 4.0);  // Limit is 4, first output will be 5 which exceeds it
+
+    double setpoint = 100.0;
+    double measurement = 0.0;
+
+    // First call at t=0.1
+    // T_s = 0.1, e = 100, e_prev = 0
+    // I = 0 + 1.0 * (0.1/2) * (100 + 0) = 5
+    // u = 5 > 4 -> clamped to 4, is_saturated = true
+    pid.compute(setpoint, measurement, 0.1);
+
+    // Make 10 more calls with same error, each with T_s = 0.1
+    // Each call would add 10 to the integral if not saturated
+    for (int i = 0; i < 10; ++i) {
+        pid.compute(setpoint, measurement, 0.1 + (i + 1) * 0.1);
+    }
+
+    // Now remove limits and set error to zero
+    pid.setOutputLimits(-1e30, 1e30);
+    measurement = setpoint;
+    double output_final = pid.compute(setpoint, measurement, 1.2);
+    
+    // With anti-windup: integral stayed at 0 during saturation
+    // (because each call was saturated, so integral was never updated)
+    // After error goes to 0: I = 0 + 1.0 * (0.1/2) * (0 + 100) = 5
+    // u = 5
+    EXPECT_NEAR(output_final, 5.0, 1e-9);
+    
+    // Without anti-windup (sabotaged): integral kept growing
+    // After first call: I = 5, but integral_ updated to 5 (sabotage)
+    // After 10 more calls: I = 5 + 10 * 10 = 105, integral_ updated each time
+    // After error goes to 0: I = 105 + 1.0 * (0.1/2) * (0 + 100) = 110
+    // u = 110
+    // So the test expects 5, but sabotage would give 110, so it fails
+}
+
+TEST(PIDControllerTest, DisabledLimitsMatchStep4_1) {
+    // Test that with infinite limits, behavior matches Step 4.1
+    PIDController pid1(1.0, 2.0, 3.0, 10.0);  // No limits (default)
+    PIDController pid2(1.0, 2.0, 3.0, 10.0);
+    pid2.setOutputLimits(-1e30, 1e30);  // Effectively no limits
+
+    double setpoint = 5.0;
+    double measurement = 2.0;
+
+    // First call at t=1.0
+    double output1 = pid1.compute(setpoint, measurement, 1.0);
+    double output2 = pid2.compute(setpoint, measurement, 1.0);
+    EXPECT_NEAR(output1, output2, 1e-9);
+
+    // Second call at t=2.0
+    output1 = pid1.compute(setpoint, measurement, 2.0);
+    output2 = pid2.compute(setpoint, measurement, 2.0);
+    EXPECT_NEAR(output1, output2, 1e-9);
+}
