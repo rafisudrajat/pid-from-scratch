@@ -2,12 +2,14 @@ set(LIBRARY_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/transfer_function.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/state_space.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/pid_controller.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/closed_loop_simulator.cc
 )
 
 set(LIBRARY_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/transfer_function.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/state_space.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pid_controller.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/closed_loop_simulator.h
 )
 
 set(LIBRARY_INCLUDES

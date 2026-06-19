@@ -1,7 +1,6 @@
 #pragma once
 #include <Eigen/Dense>
 #include <stdexcept>
-#include <functional>
 
 /**
  * @brief SISO state-space model (A, B, C, D).

@@ -1,6 +1,5 @@
 #include "state_space.h"
 #include "ode.h"
-#include "linspace.h"
 
 StateSpace::StateSpace(const Eigen::MatrixXd& A,
                        const Eigen::MatrixXd& B,
@@ -33,27 +32,17 @@ double StateSpace::output(const Eigen::VectorXd& x, double u) const {
 
 Eigen::VectorXd StateSpace::simulateStep(double u, const Eigen::VectorXd& time, const Eigen::VectorXd& x0) const {
     int nSteps = static_cast<int>(time.size());
-    int n = order();
-    
-    // Result vector for outputs
+
     Eigen::VectorXd y_output(nSteps);
-    
-    // Current state
     Eigen::VectorXd x = x0;
-    
-    // ODESolver for RK4
     ODESolver solver;
-    
-    // Lambda for the state-space ODE: dx/dt = A*x + B*u
-    // Note: u is constant (zero-order hold)
+
     auto f = [this, u](double t, const Eigen::VectorXd& x) -> Eigen::VectorXd {
         return derivative(x, u);
     };
-    
-    // Initial condition
+
     y_output(0) = output(x, u);
-    
-    // Simulate forward in time
+
     for (int i = 1; i < nSteps; ++i) {
         double stepSize = time(i) - time(i - 1);
         x = solver.rk4Step(f, time(i - 1), x, stepSize);
