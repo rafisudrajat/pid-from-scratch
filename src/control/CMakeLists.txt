@@ -1,11 +1,13 @@
 set(LIBRARY_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/transfer_function.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/state_space.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/pid_controller.cc
 )
 
 set(LIBRARY_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/transfer_function.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/state_space.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pid_controller.h
 )
 
 set(LIBRARY_INCLUDES
