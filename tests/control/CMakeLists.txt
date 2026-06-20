@@ -43,6 +43,12 @@ target_compile_definitions(notebook_golden_test PRIVATE
     TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
 )
 
+add_executable(second_order_validation_test second_order_validation_test.cc)
+target_link_libraries(second_order_validation_test GTest::gtest_main CONTROL)
+target_include_directories(second_order_validation_test PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/support/include
+)
+
 include(GoogleTest)
 gtest_discover_tests(transfer_function_test)
 gtest_discover_tests(state_space_test)
@@ -51,3 +57,4 @@ gtest_discover_tests(closed_loop_simulator_test)
 gtest_discover_tests(step_response_metrics_test)
 gtest_discover_tests(app_smoke_test)
 gtest_discover_tests(notebook_golden_test)
+gtest_discover_tests(second_order_validation_test)
