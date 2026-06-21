@@ -34,15 +34,40 @@ public:
      * coefficient vector). By the final-value theorem this equals the
      * unit-step steady-state value for a stable plant.
      *
-     * @note Only valid for type 0 systems (no poles at the origin).
-     *       For type 1+ systems (denominator has one or more s factors,
-     *       i.e. a_0 = 0) the result is undefined (division by zero),
-     *       because such plants have no finite steady-state value under
-     *       a step input.
+     * @note For type 0 systems (a_0 != 0) this is the finite ratio
+     *       b_0 / a_0. For type 1+ systems the denominator has one or more
+     *       s factors (a_0 = 0): such a plant has a pole at the origin and
+     *       its open-loop step response integrates without bound, so G(0)
+     *       is genuinely infinite. This method then returns a signed
+     *       infinity matching the sign of b_0 (rather than a silent NaN).
+     *       If b_0 is also zero — a numerator zero cancels the origin pole
+     *       in the constant terms — the limit cannot be resolved from the
+     *       constant terms alone and NaN is returned.
      *
-     * @return The ratio of constant terms (last elements).
+     * @return b_0 / a_0 for type 0; signed infinity for type 1+; NaN when
+     *         both constant terms vanish.
+     * @see systemType()
      */
     double dcGain() const;
+
+    /**
+     * @brief System type: the multiplicity of poles at the origin.
+     *
+     * The "type number" of a system is the number of pure integrators in
+     * the open loop, i.e. the multiplicity of the factor s in the
+     * denominator. In descending-power coefficient form this equals the
+     * count of trailing zero coefficients (a_0 = 0, then a_1 = 0, ...).
+     *
+     *   - Type 0: a_0 != 0           — finite DC gain, finite step error.
+     *   - Type 1: a_0 = 0, a_1 != 0  — one integrator; zero step error.
+     *   - Type 2: a_0 = a_1 = 0      — two integrators; zero step and ramp error.
+     *
+     * The type number sets how many reference shapes the closed loop can
+     * track with zero steady-state error under feedback.
+     *
+     * @return Number of denominator poles at s = 0 (>= 0).
+     */
+    int systemType() const;
 
     /**
      * @brief True if deg(num) <= deg(den) (physically realizable).

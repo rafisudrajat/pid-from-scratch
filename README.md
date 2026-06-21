@@ -531,8 +531,13 @@ Represents SISO transfer functions `G(s) = num(s) / den(s)`.
 TransferFunction(const Eigen::VectorXd& numerator,
                  const Eigen::VectorXd& denominator)
 
-// DC gain: G(0) = b_0 / a_0
+// DC gain: G(0) = b_0 / a_0 (type 0). For a type 1+ plant the pole at the
+// origin makes G(0) infinite, so this returns a signed infinity.
 double dcGain() const
+
+// System type: number of poles at the origin (integrators in the open loop).
+// 0 = finite step error, 1 = zero step error, 2 = zero step and ramp error.
+int systemType() const
 
 // Check if deg(num) <= deg(den)
 bool isProper() const
@@ -567,6 +572,17 @@ TransferFunction tf(num, den);
 
 std::cout << "DC Gain: " << tf.dcGain() << std::endl;  // 1.0
 std::cout << "Stable: " << tf.isStable() << std::endl;    // true
+std::cout << "Type:   " << tf.systemType() << std::endl;  // 0
+
+// Type 1 plant G(s) = 1/(s(s+1)) = 1/(s^2 + s) — has one integrator.
+Eigen::VectorXd num1(1); num1 << 1.0;
+Eigen::VectorXd den1(3); den1 << 1.0, 1.0, 0.0;   // s^2 + s
+TransferFunction g1(num1, den1);
+std::cout << "Type:   " << g1.systemType() << std::endl;  // 1
+std::cout << "DC Gain: " << g1.dcGain() << std::endl;     // inf
+// A type 1 plant tracks a step with zero steady-state error even under
+// pure proportional control; a type 2 plant (den = [1, 0, 0]) needs
+// derivative action for stability but then tracks both steps and ramps.
 ```
 
 ### StateSpace Class

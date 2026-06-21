@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <cmath>
+#include <limits>
 #include "transfer_function.h"
 #include "eigen_matchers.h"
 
@@ -128,4 +130,79 @@ TEST(TransferFunctionTest, StabilityPredicate) {
     den2 << 1.0, 0.0, -1.0;
     TransferFunction unstable(num2, den2);
     EXPECT_FALSE(unstable.isStable());
+}
+
+TEST(TransferFunctionTest, SystemTypeZero) {
+    // Type 0: no pole at the origin. G = 5/(2s + 1) => den = [2, 1], a0 = 1 != 0.
+    Eigen::VectorXd num(1);
+    num << 5.0;
+    Eigen::VectorXd den(2);
+    den << 2.0, 1.0;
+
+    TransferFunction tf(num, den);
+    EXPECT_EQ(tf.systemType(), 0);
+}
+
+TEST(TransferFunctionTest, SystemTypeOne) {
+    // Type 1: one pole at the origin. G = 1/(s(s+1)) = 1/(s^2 + s)
+    // => den = [1, 1, 0]: a0 = 0, a1 = 1 != 0 → exactly one trailing zero.
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 1.0, 0.0;
+
+    TransferFunction tf(num, den);
+    EXPECT_EQ(tf.systemType(), 1);
+}
+
+TEST(TransferFunctionTest, SystemTypeTwo) {
+    // Type 2: double integrator. G = 1/s^2 => den = [1, 0, 0]:
+    // a0 = 0 and a1 = 0 → two trailing zeros.
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 0.0, 0.0;
+
+    TransferFunction tf(num, den);
+    EXPECT_EQ(tf.systemType(), 2);
+}
+
+TEST(TransferFunctionTest, DcGainType1IsInfinite) {
+    // A type-1 plant has a pole at the origin, so G(0) is unbounded:
+    // the open-loop step response integrates without limit. dcGain() must
+    // report +infinity (not a silent NaN) when b0 != 0.
+    // G = 1/(s^2 + s) => num = [1], den = [1, 1, 0].
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 1.0, 0.0;
+
+    TransferFunction tf(num, den);
+    double g0 = tf.dcGain();
+    EXPECT_TRUE(std::isinf(g0));
+    EXPECT_GT(g0, 0.0);
+}
+
+TEST(TransferFunctionTest, DcGainType1NegativeNumerator) {
+    // Sign of the infinity follows the sign of b0. G = -3/(s^2 + s).
+    Eigen::VectorXd num(1);
+    num << -3.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 1.0, 0.0;
+
+    TransferFunction tf(num, den);
+    double g0 = tf.dcGain();
+    EXPECT_TRUE(std::isinf(g0));
+    EXPECT_LT(g0, 0.0);
+}
+
+TEST(TransferFunctionTest, DcGainType2IsInfinite) {
+    // Double integrator G = 1/s^2 also has infinite DC gain.
+    Eigen::VectorXd num(1);
+    num << 1.0;
+    Eigen::VectorXd den(3);
+    den << 1.0, 0.0, 0.0;
+
+    TransferFunction tf(num, den);
+    EXPECT_TRUE(std::isinf(tf.dcGain()));
 }
